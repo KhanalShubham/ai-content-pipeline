@@ -66,6 +66,8 @@
   .stage{flex:1;display:flex;flex-direction:column;align-items:center;text-align:center;position:relative}
   .node{width:46px;height:46px;border-radius:9px;background:var(--panel-2);border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:1.15rem;transition:border-color .3s,box-shadow .3s,background .3s;position:relative;z-index:1}
   .stage .label{margin-top:9px;font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+  .stage.prod-only{opacity:.45}
+  .stage.prod-only .label::after{content:'prod';display:inline-block;margin-left:5px;font-size:.55rem;letter-spacing:.08em;background:var(--panel-2);border:1px solid var(--line);border-radius:3px;padding:1px 4px;vertical-align:middle;color:var(--muted);text-transform:lowercase}
   .edge{flex:1;height:2px;background:var(--line);margin-top:23px;position:relative;overflow:hidden;min-width:18px}
   .edge::after{content:'';position:absolute;inset:0;background:var(--green);transform:scaleX(0);transform-origin:left;transition:transform .5s ease}
   .stage.active .node{border-color:var(--amber);box-shadow:0 0 0 4px rgba(240,163,42,.12);animation:pulse 1.4s ease-in-out infinite}
@@ -143,11 +145,11 @@
         <div class="edge" id="e1"></div>
         <div class="stage" id="s2"><div class="node">📈</div><div class="label">SEO</div></div>
         <div class="edge" id="e2"></div>
-        <div class="stage" id="s3"><div class="node">📧</div><div class="label">Email sent</div></div>
+        <div class="stage prod-only" id="s3"><div class="node">📧</div><div class="label">Email gate</div></div>
         <div class="edge" id="e3"></div>
-        <div class="stage" id="s4"><div class="node">✅</div><div class="label">Approve</div></div>
+        <div class="stage prod-only" id="s4"><div class="node">✅</div><div class="label">Approve</div></div>
         <div class="edge" id="e4"></div>
-        <div class="stage" id="s5"><div class="node">🌐</div><div class="label">WordPress</div></div>
+        <div class="stage prod-only" id="s5"><div class="node">🌐</div><div class="label">WordPress</div></div>
       </div>
       <div style="margin-top:10px"><span id="seo-badge" style="display:none;font-family:'JetBrains Mono',monospace;font-size:.7rem;background:#1b232d;border:1px solid #2a323d;border-radius:999px;padding:4px 12px;color:#46c25a"></span></div>
       <div class="status mono" id="status" role="status"></div>
@@ -271,17 +273,15 @@ async function generate(){
     const data = await res.json();
     const md = data.article || data.output || (typeof data === 'string' ? data : null);
     if(!md) throw new Error('Empty response');
-    // stages 0-2 done, stage 3 (email) done
-    finishThrough(3);
-    // stage 4 = waiting for approval
-    waitStage(4);
+    // demo ends here — only stages 0-2 run in this path
+    finishThrough(2);
     // show SEO badge
     if(data.seoScore){
       const badge = $('seo-badge');
       badge.textContent = 'SEO score: ' + data.seoScore + '/100';
       badge.style.display = 'inline-block';
     }
-    status('✅ Draft ready · approval email sent to your inbox · approve to publish to WordPress');
+    status('✅ Draft ready — in the production pipeline this would now go to email approval before publishing to WordPress.');
     $('article-meta').textContent = 'draft · ' + new Date().toLocaleTimeString() + ' · ' + topic + (data.wordCount ? ' · ' + data.wordCount + ' words' : '');
     $('article-body').innerHTML = marked.parse(md);
     $('article').classList.add('show');
