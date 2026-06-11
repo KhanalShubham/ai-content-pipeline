@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Content Pipeline — Shubham Khanal</title>
+<meta name="description" content="Live demo: an end-to-end AI content automation pipeline built with n8n, Google Gemini and the WordPress REST API by Shubham Khanal." />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>
+<style>
+  :root{
+    --ink:#0e1116;
+    --panel:#151b23;
+    --panel-2:#1b232d;
+    --line:#2a323d;
+    --text:#d7dee6;
+    --muted:#8b97a3;
+    --amber:#f0a32a;
+    --amber-dim:#7a5413;
+    --green:#46c25a;
+    --paper:#faf7f1;
+    --paper-ink:#23221e;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--ink);
+    color:var(--text);
+    font-family:'Space Grotesk',system-ui,sans-serif;
+    line-height:1.6;
+    min-height:100vh;
+  }
+  .mono{font-family:'JetBrains Mono',monospace}
+  a{color:var(--amber);text-decoration:none}
+  a:hover{text-decoration:underline}
+  a:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .wrap{max-width:880px;margin:0 auto;padding:0 20px}
+  header{border-bottom:1px solid var(--line);padding:16px 0}
+  header .wrap{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+  .brand{font-weight:700;letter-spacing:.02em}
+  .brand .dot{color:var(--amber)}
+  nav{display:flex;gap:18px;font-size:.85rem}
+  nav a{color:var(--muted)}
+  nav a:hover{color:var(--text);text-decoration:none}
+  .hero{padding:56px 0 28px}
+  .eyebrow{font-family:'JetBrains Mono',monospace;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--amber);margin-bottom:14px}
+  h1{font-size:clamp(1.7rem,4.5vw,2.6rem);font-weight:700;line-height:1.15;letter-spacing:-.01em;max-width:640px}
+  .sub{color:var(--muted);margin-top:14px;max-width:560px;font-size:1.02rem}
+  .demo{margin-top:36px;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .demo-head{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+  .demo-head .led{width:8px;height:8px;border-radius:50%;background:var(--green);flex:none}
+  .demo-body{padding:22px 18px}
+  .input-row{display:flex;gap:10px;flex-wrap:wrap}
+  .input-row input{flex:1;min-width:220px;background:var(--ink);border:1px solid var(--line);border-radius:8px;color:var(--text);font:inherit;padding:13px 14px}
+  .input-row input::placeholder{color:#5d6b78}
+  .input-row button{background:var(--amber);color:#1d1303;border:none;border-radius:8px;font:inherit;font-weight:700;padding:13px 24px;cursor:pointer;transition:transform .12s ease,filter .12s ease}
+  .input-row button:hover{filter:brightness(1.08)}
+  .input-row button:active{transform:scale(.97)}
+  .input-row button:disabled{background:var(--amber-dim);color:#3c2f15;cursor:wait}
+  .hint{font-size:.8rem;color:var(--muted);margin-top:10px}
+  .hint .mono{font-size:.74rem}
+  .pipeline{display:flex;align-items:flex-start;margin:28px 4px 4px;user-select:none}
+  .stage{flex:1;display:flex;flex-direction:column;align-items:center;text-align:center;position:relative}
+  .node{width:46px;height:46px;border-radius:9px;background:var(--panel-2);border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:1.15rem;transition:border-color .3s,box-shadow .3s,background .3s;position:relative;z-index:1}
+  .stage .label{margin-top:9px;font-family:'JetBrains Mono',monospace;font-size:.62rem;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+  .edge{flex:1;height:2px;background:var(--line);margin-top:23px;position:relative;overflow:hidden;min-width:18px}
+  .edge::after{content:'';position:absolute;inset:0;background:var(--green);transform:scaleX(0);transform-origin:left;transition:transform .5s ease}
+  .stage.active .node{border-color:var(--amber);box-shadow:0 0 0 4px rgba(240,163,42,.12);animation:pulse 1.4s ease-in-out infinite}
+  .stage.done .node{border-color:var(--green);background:#15241a}
+  .stage.done .label{color:var(--green)}
+  .stage.waiting .node{border-color:#a78bfa;box-shadow:0 0 0 4px rgba(167,139,250,.12);animation:pulse-wait 1.8s ease-in-out infinite}
+  .stage.waiting .label{color:#a78bfa}
+  @keyframes pulse-wait{0%,100%{box-shadow:0 0 0 3px rgba(167,139,250,.08)}50%{box-shadow:0 0 0 7px rgba(167,139,250,.22)}}
+  .edge.done::after{transform:scaleX(1)}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 3px rgba(240,163,42,.10)}50%{box-shadow:0 0 0 7px rgba(240,163,42,.22)}}
+  @media (prefers-reduced-motion: reduce){.stage.active .node{animation:none}.edge::after{transition:none}}
+  .status{margin-top:18px;font-family:'JetBrains Mono',monospace;font-size:.78rem;color:var(--muted);min-height:1.4em}
+  .status.err{color:#e5534b}
+  .article{display:none;margin-top:22px;background:var(--paper);color:var(--paper-ink);border-radius:var(--radius);padding:34px clamp(18px,5vw,46px);font-family:Georgia,'Times New Roman',serif;line-height:1.75}
+  .article.show{display:block;animation:rise .45s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .article h1,.article h2,.article h3{font-family:'Space Grotesk',sans-serif;line-height:1.25;margin:1.4em 0 .5em;color:#171712}
+  .article h1{font-size:1.7rem;margin-top:0}
+  .article h2{font-size:1.25rem}
+  .article p{margin:.85em 0}
+  .article ul,.article ol{margin:.85em 0 .85em 1.4em}
+  .article-meta{font-family:'JetBrains Mono',monospace;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:#8a8676;border-bottom:1px solid #e4dfd2;padding-bottom:12px;margin-bottom:20px}
+  section.how{padding:64px 0 30px}
+  h2.sec{font-size:1.35rem;font-weight:700;margin-bottom:8px}
+  .sec-sub{color:var(--muted);max-width:620px;margin-bottom:28px}
+  .flow{font-family:'JetBrains Mono',monospace;font-size:.78rem;line-height:2.1;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;overflow-x:auto;white-space:pre;color:var(--muted)}
+  .flow b{color:var(--text);font-weight:500}
+  .flow .g{color:var(--green)}
+  .flow .a{color:var(--amber)}
+  .facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin-top:26px}
+  .fact{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
+  .fact .k{font-family:'JetBrains Mono',monospace;font-size:.66rem;letter-spacing:.12em;text-transform:uppercase;color:var(--amber);margin-bottom:8px}
+  .fact p{font-size:.88rem;color:var(--muted)}
+  .fact p b{color:var(--text);font-weight:500}
+  .stack{display:flex;flex-wrap:wrap;gap:8px;margin-top:26px}
+  .chip{font-family:'JetBrains Mono',monospace;font-size:.72rem;border:1px solid var(--line);border-radius:999px;padding:6px 13px;color:var(--muted)}
+  footer{border-top:1px solid var(--line);margin-top:70px;padding:26px 0 40px;color:var(--muted);font-size:.85rem}
+  footer .wrap{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="brand">shubham khanal<span class="dot">.</span></div>
+    <nav>
+      <a href="#how">How it works</a>
+      <a href="https://shubhamkhanal.wordpress.com" target="_blank" rel="noopener">Published output</a>
+      <a id="gh-link" href="https://github.com/KhanalShubham" target="_blank" rel="noopener">GitHub</a>
+      <a id="li-link" href="https://www.linkedin.com/in/shubhamkhanal/" target="_blank" rel="noopener">LinkedIn</a>
+    </nav>
+  </div>
+</header>
+<main class="wrap">
+  <div class="hero">
+    <div class="eyebrow">live demo · n8n + gemini + wordpress rest api</div>
+    <h1>An AI content pipeline that writes, reviews and publishes — from a single topic.</h1>
+    <p class="sub">
+      Type any topic below. A self-hosted n8n workflow receives it, Google Gemini writes
+      a full SEO article, an approval email lands in my inbox — I click Approve, and it
+      auto-publishes to WordPress. All triggered from this page.
+    </p>
+  </div>
+  <div class="demo" id="demo">
+    <div class="demo-head"><span class="led"></span>live pipeline · live n8n instance → gemini → gmail → wordpress</div>
+    <div class="demo-body">
+      <div class="input-row">
+        <input id="topic" type="text" maxlength="120" placeholder="e.g. Why elderly home care is growing in Kathmandu" aria-label="Article topic" />
+        <button id="go">Generate article</button>
+      </div>
+      <p class="hint">First run can take up to a minute — the demo server sleeps on the free tier and needs to wake up. <span class="mono">No login. Nothing is published from this page.</span></p>
+      <div class="pipeline" aria-hidden="true">
+        <div class="stage" id="s0"><div class="node">📥</div><div class="label">Webhook</div></div>
+        <div class="edge" id="e0"></div>
+        <div class="stage" id="s1"><div class="node">✍️</div><div class="label">Gemini</div></div>
+        <div class="edge" id="e1"></div>
+        <div class="stage" id="s2"><div class="node">📈</div><div class="label">SEO</div></div>
+        <div class="edge" id="e2"></div>
+        <div class="stage" id="s3"><div class="node">📧</div><div class="label">Email sent</div></div>
+        <div class="edge" id="e3"></div>
+        <div class="stage" id="s4"><div class="node">✅</div><div class="label">Approve</div></div>
+        <div class="edge" id="e4"></div>
+        <div class="stage" id="s5"><div class="node">🌐</div><div class="label">WordPress</div></div>
+      </div>
+      <div style="margin-top:10px"><span id="seo-badge" style="display:none;font-family:'JetBrains Mono',monospace;font-size:.7rem;background:#1b232d;border:1px solid #2a323d;border-radius:999px;padding:4px 12px;color:#46c25a"></span></div>
+      <div class="status mono" id="status" role="status"></div>
+      <article class="article" id="article">
+        <div class="article-meta" id="article-meta"></div>
+        <div id="article-body"></div>
+      </article>
+    </div>
+  </div>
+  <section class="how" id="how">
+    <h2 class="sec">How it works</h2>
+    <p class="sec-sub">
+      This page is the front door. The pipeline itself is a self-hosted n8n instance on Render,
+      built and wired end-to-end — OAuth2, token flows, conditional branching and all.
+    </p>
+    <div class="flow"><b>Demo path</b>  (what you just ran)
+this page ──▶ <span class="a">POST /webhook/generate-article</span> ──▶ Gemini writer agent ──▶ JSON back to this page
+
+<b>Production path</b>  (runs on Google Sheets)
+new sheet row <span class="g">status=Pending</span>
+   ──▶ IF gate ──▶ Gemini writer ──▶ SEO analysis agent ──▶ sheet updated
+   ──▶ markdown → HTML ──▶ <span class="a">approval email (send &amp; wait)</span>
+   ──▶ approved? ──▶ WordPress REST publish ──▶ live URL written back to sheet</div>
+    <div class="facts">
+      <div class="fact">
+        <div class="k">Human in the loop</div>
+        <p>Nothing goes live without a click. The workflow <b>pauses on a real approval email</b> with approve / decline actions before publishing.</p>
+      </div>
+      <div class="fact">
+        <div class="k">Auth, the hard way</div>
+        <p>Self-hosted means no shortcuts: <b>custom Google Cloud OAuth2 client</b> for Sheets &amp; Gmail, and a <b>WordPress.com OAuth token exchange</b> for publishing.</p>
+      </div>
+      <div class="fact">
+        <div class="k">State lives in Sheets</div>
+        <p>Every article's lifecycle — <b>Pending → Written → Published</b> — plus its SEO report and live URL is tracked back into one Google Sheet.</p>
+      </div>
+      <div class="fact">
+        <div class="k">Deployed, not local</div>
+        <p>n8n runs in Docker on <b>Render (Singapore)</b>, tuned to fit a 512&nbsp;MB instance. This site is static on <b>Vercel</b> and talks to it over CORS.</p>
+      </div>
+    </div>
+    <div class="stack">
+      <span class="chip">n8n (self-hosted)</span>
+      <span class="chip">Google Gemini</span>
+      <span class="chip">Google Sheets API</span>
+      <span class="chip">Gmail send-and-wait</span>
+      <span class="chip">WordPress REST API</span>
+      <span class="chip">OAuth 2.0</span>
+      <span class="chip">Docker · Render</span>
+      <span class="chip">Vercel</span>
+    </div>
+  </section>
+</main>
+<footer>
+  <div class="wrap">
+    <span>Built by Shubham Khanal — Kathmandu, Nepal</span>
+    <span class="mono">BSc (Hons) Computing · automation · AI/ML</span>
+  </div>
+</footer>
+<script>
+const WEBHOOK_URL = "https://shubhamkhanal593.app.n8n.cloud/webhook/generate-article";
+const $ = id => document.getElementById(id);
+const stages = [$('s0'), $('s1'), $('s2'), $('s3'), $('s4'), $('s5')];
+const edges  = [$('e0'), $('e1'), $('e2'), $('e3'), $('e4')];
+let timers = [];
+function resetPipeline(){
+  timers.forEach(clearTimeout); timers = [];
+  stages.forEach(s => s.classList.remove('active','done','waiting'));
+  edges.forEach(e => e.classList.remove('done'));
+  $('article').classList.remove('show');
+  $('status').classList.remove('err');
+  $('seo-badge').style.display = 'none';
+}
+function setStage(i){
+  stages.forEach((s,idx)=>{
+    s.classList.toggle('done', idx < i);
+    s.classList.toggle('active', idx === i);
+    s.classList.remove('waiting');
+  });
+  edges.forEach((e,idx)=> e.classList.toggle('done', idx < i));
+}
+function waitStage(i){
+  stages[i].classList.remove('active','done');
+  stages[i].classList.add('waiting');
+}
+function finishThrough(i){
+  for(let idx=0;idx<=i;idx++){
+    stages[idx].classList.remove('active','waiting');
+    stages[idx].classList.add('done');
+  }
+  for(let idx=0;idx<i;idx++) edges[idx].classList.add('done');
+}
+function status(msg, isErr=false){
+  $('status').textContent = msg;
+  $('status').classList.toggle('err', isErr);
+}
+async function generate(){
+  const topic = $('topic').value.trim();
+  if(!topic){ $('topic').focus(); return; }
+  const btn = $('go');
+  btn.disabled = true; btn.textContent = 'Running…';
+  resetPipeline();
+  setStage(0);
+  status('Webhook received — pipeline started…');
+  timers.push(setTimeout(()=>{ status('Server waking up (free tier sleeps between visits)…'); }, 8000));
+  timers.push(setTimeout(()=>{ setStage(1); status('Gemini is writing the full article…'); }, 18000));
+  timers.push(setTimeout(()=>{ setStage(2); status('SEO analyzer scoring the draft…'); }, 45000));
+  timers.push(setTimeout(()=>{ status('Still working — Gemini is being thorough…'); }, 70000));
+  const controller = new AbortController();
+  const kill = setTimeout(()=>controller.abort(), 150000);
+  try{
+    const res = await fetch(WEBHOOK_URL, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ topic }),
+      signal: controller.signal
+    });
+    clearTimeout(kill);
+    timers.forEach(clearTimeout);
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const md = data.article || data.output || (typeof data === 'string' ? data : null);
+    if(!md) throw new Error('Empty response');
+    // stages 0-2 done, stage 3 (email) done
+    finishThrough(3);
+    // stage 4 = waiting for approval
+    waitStage(4);
+    // show SEO badge
+    if(data.seoScore){
+      const badge = $('seo-badge');
+      badge.textContent = 'SEO score: ' + data.seoScore + '/100';
+      badge.style.display = 'inline-block';
+    }
+    status('✅ Draft ready · approval email sent to your inbox · approve to publish to WordPress');
+    $('article-meta').textContent = 'draft · ' + new Date().toLocaleTimeString() + ' · ' + topic + (data.wordCount ? ' · ' + data.wordCount + ' words' : '');
+    $('article-body').innerHTML = marked.parse(md);
+    $('article').classList.add('show');
+    $('article').scrollIntoView({behavior:'smooth', block:'start'});
+  }catch(err){
+    timers.forEach(clearTimeout);
+    stages.forEach(s=>s.classList.remove('active','waiting'));
+    const aborted = err.name === 'AbortError';
+    status(aborted
+      ? 'Server took too long to wake. Try once more — second runs are instant.'
+      : 'Could not reach the pipeline. Try again in a moment.', true);
+  }finally{
+    btn.disabled = false; btn.textContent = 'Generate article';
+  }
+}
+$('go').addEventListener('click', generate);
+$('topic').addEventListener('keydown', e => { if(e.key === 'Enter') generate(); });
+</script>
+</body>
+</html>

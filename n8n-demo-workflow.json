@@ -1,0 +1,61 @@
+{
+  "name": "Demo Webhook — Article Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "generate-article",
+        "responseMode": "responseNode",
+        "options": { "allowedOrigins": "*" }
+      },
+      "id": "a1111111-1111-1111-1111-111111111111",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "demo-generate-article"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an expert SEO content writer.\n\nTOPIC:\n{{ $json.body.topic }}\n\nWrite a complete SEO blog article ONLY about the topic above.\n\nRequirements:\n- Use the exact topic in the H1 title (markdown #)\n- Around 700-900 words\n- Use H2 headings (markdown ##)\n- SEO optimized, clear and engaging\n- No unrelated topics, do not change the topic\n- Return ONLY the article in markdown, no preamble",
+        "options": {}
+      },
+      "id": "b2222222-2222-2222-2222-222222222222",
+      "name": "Demo Writer Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [260, 0]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {}
+      },
+      "id": "c3333333-3333-3333-3333-333333333333",
+      "name": "Gemini Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [260, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"article\": $json.output } }}",
+        "options": {}
+      },
+      "id": "d4444444-4444-4444-4444-444444444444",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [540, 0]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Demo Writer Agent", "type": "main", "index": 0 }]] },
+    "Demo Writer Agent": { "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]] },
+    "Gemini Model": { "ai_languageModel": [[{ "node": "Demo Writer Agent", "type": "ai_languageModel", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {}
+}
